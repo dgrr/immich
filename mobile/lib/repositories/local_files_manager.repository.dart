@@ -17,6 +17,18 @@ class LocalFilesManagerRepository {
     return await _service.moveToTrash(mediaUrls);
   }
 
+  Future<bool> moveToTrashByIds(List<String> assetIds) async {
+    return await _service.moveToTrashByIds(assetIds);
+  }
+
+  Future<bool> hasDeletePermissionIOS() async {
+    return await _service.hasDeletePermissionIOS();
+  }
+
+  Future<bool> requestDeletePermissionIOS() async {
+    return await _service.requestDeletePermissionIOS();
+  }
+
   Future<bool> restoreFromTrash(String fileName, int type) async {
     return await _service.restoreFromTrash(fileName, type);
   }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:logging/logging.dart';
@@ -15,6 +17,39 @@ class LocalFilesManagerService {
       return await _channel.invokeMethod('moveToTrash', {'mediaUrls': mediaUrls});
     } catch (e, s) {
       _logger.warning('Error moving file to trash', e, s);
+      return false;
+    }
+  }
+
+  Future<bool> moveToTrashByIds(List<String> assetIds) async {
+    if (!Platform.isIOS) {
+      _logger.warning('moveToTrashByIds only supported on iOS');
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod('moveToTrash', {'assetIds': assetIds});
+    } catch (e, s) {
+      _logger.warning('Error moving files to trash by ids', e, s);
+      return false;
+    }
+  }
+
+  Future<bool> hasDeletePermissionIOS() async {
+    if (!Platform.isIOS) return false;
+    try {
+      return await _channel.invokeMethod('hasDeletePermission');
+    } catch (e, s) {
+      _logger.warning('Error checking delete permission', e, s);
+      return false;
+    }
+  }
+
+  Future<bool> requestDeletePermissionIOS() async {
+    if (!Platform.isIOS) return false;
+    try {
+      return await _channel.invokeMethod('requestDeletePermission');
+    } catch (e, s) {
+      _logger.warning('Error requesting delete permission', e, s);
       return false;
     }
   }

@@ -35,8 +35,10 @@ class AdvancedSettings extends HookConsumerWidget {
 
     final advancedTroubleshooting = useAppSettingsState(AppSettingsEnum.advancedTroubleshooting);
     final manageLocalMediaAndroid = useAppSettingsState(AppSettingsEnum.manageLocalMediaAndroid);
+    final manageLocalMediaIOS = useAppSettingsState(AppSettingsEnum.manageLocalMediaIOS);
     final isManageMediaSupported = useState(false);
     final manageMediaAndroidPermission = useState(false);
+    final hasIOSDeletePermission = useState(false);
     final levelId = useAppSettingsState(AppSettingsEnum.logLevel);
     final preferRemote = useAppSettingsState(AppSettingsEnum.preferRemoteImage);
     final allowSelfSignedSSLCert = useAppSettingsState(AppSettingsEnum.allowSelfSignedSSLCert);
@@ -64,6 +66,11 @@ class AdvancedSettings extends HookConsumerWidget {
           manageMediaAndroidPermission.value = await ref
               .read(localFilesManagerRepositoryProvider)
               .hasManageMediaPermission();
+        }
+        if (Platform.isIOS) {
+          hasIOSDeletePermission.value = await ref
+              .read(localFilesManagerRepositoryProvider)
+              .hasDeletePermissionIOS();
         }
       }();
       return null;
@@ -105,6 +112,22 @@ class AdvancedSettings extends HookConsumerWidget {
               },
             ),
           ],
+        ),
+      if (Platform.isIOS)
+        SettingsSwitchListTile(
+          enabled: true,
+          valueNotifier: manageLocalMediaIOS,
+          title: "advanced_settings_sync_remote_deletions_title".tr(),
+          subtitle: "advanced_settings_sync_remote_deletions_ios_subtitle".tr(),
+          onChanged: (value) async {
+            if (value && !hasIOSDeletePermission.value) {
+              final result = await ref.read(localFilesManagerRepositoryProvider).requestDeletePermissionIOS();
+              hasIOSDeletePermission.value = result;
+              if (!result) {
+                manageLocalMediaIOS.value = false;
+              }
+            }
+          },
         ),
       SettingsSliderListTile(
         text: "advanced_settings_log_level_title".tr(namedArgs: {'level': logLevel}),

@@ -225,9 +225,15 @@ class SyncService {
     final List<Asset> localAssets = await _assetRepository.getAllLocal();
     final List<Asset> matchedAssets = localAssets.where((asset) => idsToDelete.contains(asset.remoteId)).toList();
 
-    final mediaUrls = await Future.wait(matchedAssets.map((asset) => asset.local?.getMediaUrl() ?? Future.value(null)));
-
-    await _localFilesManager.moveToTrash(mediaUrls.nonNulls.toList());
+    if (Platform.isAndroid) {
+      final mediaUrls = await Future.wait(matchedAssets.map((asset) => asset.local?.getMediaUrl() ?? Future.value(null)));
+      await _localFilesManager.moveToTrash(mediaUrls.nonNulls.toList());
+    } else if (Platform.isIOS) {
+      final localIds = matchedAssets.map((asset) => asset.localId).nonNulls.toList();
+      if (localIds.isNotEmpty) {
+        await _localFilesManager.moveToTrashByIds(localIds);
+      }
+    }
   }
 
   /// Deletes remote-only assets, updates merged assets to be local-only
@@ -235,7 +241,9 @@ class SyncService {
     return _assetRepository.transaction(() async {
       await _assetRepository.deleteAllByRemoteId(idsToDelete, state: AssetState.remote);
       final merged = await _assetRepository.getAllByRemoteId(idsToDelete, state: AssetState.merged);
-      if (Platform.isAndroid && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaAndroid)) {
+      final shouldSyncDeletions = (Platform.isAndroid && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaAndroid)) ||
+          (Platform.isIOS && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaIOS));
+      if (shouldSyncDeletions) {
         await _moveToTrashMatchedAssets(idsToDelete);
       }
       if (merged.isEmpty) return;

@@ -22,6 +22,7 @@ import UIKit
     let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
     AppDelegate.registerPlugins(with: controller.engine, controller: controller)
     BackgroundServicePlugin.register(with: self.registrar(forPlugin: "BackgroundServicePlugin")!)
+    FileTrashPlugin.register(with: self.registrar(forPlugin: "FileTrashPlugin")!)
 
     BackgroundServicePlugin.registerBackgroundProcessing()
     BackgroundWorkerApiImpl.registerBackgroundWorkers()

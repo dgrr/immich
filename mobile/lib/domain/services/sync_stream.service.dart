@@ -187,11 +187,20 @@ class SyncStreamService {
       case SyncEntityType.assetV1:
         final remoteSyncAssets = data.cast<SyncAssetV1>();
         await _syncStreamRepository.updateAssetsV1(remoteSyncAssets);
-        if (CurrentPlatform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false)) {
-          final hasPermission = await _localFilesManager.hasManageMediaPermission();
+        final shouldSyncDeletions = (CurrentPlatform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false)) ||
+            (CurrentPlatform.isIOS && Store.get(StoreKey.manageLocalMediaIOS, false));
+        if (shouldSyncDeletions) {
+          bool hasPermission = false;
+          if (CurrentPlatform.isAndroid) {
+            hasPermission = await _localFilesManager.hasManageMediaPermission();
+          } else if (CurrentPlatform.isIOS) {
+            hasPermission = true; // iOS handles permission at delete time
+          }
           if (hasPermission) {
             await _handleRemoteTrashed(remoteSyncAssets.where((e) => e.deletedAt != null).map((e) => e.checksum));
-            await _applyRemoteRestoreToLocal();
+            if (CurrentPlatform.isAndroid) {
+              await _applyRemoteRestoreToLocal();
+            }
           } else {
             _logger.warning("sync Trashed Assets cannot proceed because MANAGE_MEDIA permission is missing");
           }
@@ -369,22 +378,31 @@ class SyncStreamService {
   Future<void> _handleRemoteTrashed(Iterable<String> checksums) async {
     if (checksums.isEmpty) {
       return Future.value();
-    } else {
-      final localAssetsToTrash = await _localAssetRepository.getAssetsFromBackupAlbums(checksums);
-      if (localAssetsToTrash.isNotEmpty) {
-        final mediaUrls = await Future.wait(
-          localAssetsToTrash.values
-              .expand((e) => e)
-              .map((localAsset) => _storageRepository.getAssetEntityForAsset(localAsset).then((e) => e?.getMediaUrl())),
-        );
-        _logger.info("Moving to trash ${mediaUrls.join(", ")} assets");
-        final result = await _localFilesManager.moveToTrash(mediaUrls.nonNulls.toList());
-        if (result) {
-          await _trashedLocalAssetRepository.trashLocalAsset(localAssetsToTrash);
-        }
-      } else {
-        _logger.info("No assets found in backup-enabled albums for assets: $checksums");
-      }
+    }
+
+    final localAssetsToTrash = await _localAssetRepository.getAssetsFromBackupAlbums(checksums);
+    if (localAssetsToTrash.isEmpty) {
+      _logger.info("No assets found in backup-enabled albums for assets: $checksums");
+      return;
+    }
+
+    bool result = false;
+    if (CurrentPlatform.isAndroid) {
+      final mediaUrls = await Future.wait(
+        localAssetsToTrash.values
+            .expand((e) => e)
+            .map((localAsset) => _storageRepository.getAssetEntityForAsset(localAsset).then((e) => e?.getMediaUrl())),
+      );
+      _logger.info("Moving to trash ${mediaUrls.length} assets");
+      result = await _localFilesManager.moveToTrash(mediaUrls.nonNulls.toList());
+    } else if (CurrentPlatform.isIOS) {
+      final localIds = localAssetsToTrash.values.expand((e) => e).map((a) => a.id).toList();
+      _logger.info("Moving to trash ${localIds.length} assets on iOS");
+      result = await _localFilesManager.moveToTrashByIds(localIds);
+    }
+
+    if (result) {
+      await _trashedLocalAssetRepository.trashLocalAsset(localAssetsToTrash);
     }
   }
 
