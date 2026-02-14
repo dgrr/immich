@@ -44,13 +44,19 @@ class FileTrashPlugin: NSObject, FlutterPlugin {
   }
   
   private func moveToTrash(assetIds: [String], result: @escaping FlutterResult) {
+    print("FileTrashPlugin: moveToTrash called with \(assetIds.count) asset IDs")
+    
     guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else {
+      print("FileTrashPlugin: Photo library access not authorized")
       result(FlutterError(code: "PERMISSION_DENIED", message: "Photo library access required", details: nil))
       return
     }
     
     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: nil)
+    print("FileTrashPlugin: Found \(fetchResult.count) assets matching IDs")
+    
     guard fetchResult.count > 0 else {
+      print("FileTrashPlugin: No assets found, returning success")
       result(true)
       return
     }
@@ -60,13 +66,16 @@ class FileTrashPlugin: NSObject, FlutterPlugin {
       assets.append(asset)
     }
     
+    print("FileTrashPlugin: Requesting deletion of \(assets.count) assets")
     PHPhotoLibrary.shared().performChanges({
       PHAssetChangeRequest.deleteAssets(assets as NSFastEnumeration)
     }) { success, error in
       DispatchQueue.main.async {
         if let error = error {
+          print("FileTrashPlugin: Delete failed - \(error.localizedDescription)")
           result(FlutterError(code: "DELETE_FAILED", message: error.localizedDescription, details: nil))
         } else {
+          print("FileTrashPlugin: Delete completed with success=\(success)")
           result(success)
         }
       }
