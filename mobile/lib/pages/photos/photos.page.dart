@@ -106,7 +106,7 @@ class PhotosPage extends HookConsumerWidget {
         Column(
           children: [
             SizedBox(height: kToolbarHeight + context.padding.top),
-            const OfflineIndicator(),
+            const OfflineIndicator(showStats: true),
             Expanded(
               child: MultiselectGrid(
                 topWidget: (currentUser != null && currentUser.memoryEnabled) ? const MemoryLane() : const SizedBox(),
