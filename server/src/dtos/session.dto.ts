@@ -27,6 +27,12 @@ export class SessionUpdateDto {
   isPendingSyncReset?: true;
 }
 
+export class PushTokenDto {
+  @ApiProperty({ description: 'FCM push token' })
+  @IsString()
+  token!: string;
+}
+
 export class SessionResponseDto {
   @ApiProperty({ description: 'Session ID' })
   id!: string;

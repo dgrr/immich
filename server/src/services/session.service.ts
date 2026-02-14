@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { OnEvent, OnJob } from 'src/decorators';
 import { AuthDto } from 'src/dtos/auth.dto';
 import {
+  PushTokenDto,
   SessionCreateDto,
   SessionCreateResponseDto,
   SessionResponseDto,
@@ -84,5 +85,10 @@ export class SessionService extends BaseService {
   @OnEvent({ name: 'AuthChangePassword' })
   async onAuthChangePassword({ userId, currentSessionId }: ArgOf<'AuthChangePassword'>): Promise<void> {
     await this.sessionRepository.invalidate({ userId, excludeId: currentSessionId });
+  }
+
+  async registerPushToken(auth: AuthDto, id: string, dto: PushTokenDto): Promise<void> {
+    await this.requireAccess({ auth, permission: Permission.SessionUpdate, ids: [id] });
+    await this.sessionRepository.updatePushToken(id, dto.token);
   }
 }

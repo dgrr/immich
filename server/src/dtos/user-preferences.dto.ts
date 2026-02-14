@@ -101,6 +101,14 @@ class CastUpdate {
   gCastEnabled?: boolean;
 }
 
+class PushNotificationsUpdate {
+  @ValidateBoolean({ optional: true, description: 'Whether push notifications are enabled' })
+  enabled?: boolean;
+
+  @ValidateBoolean({ optional: true, description: 'Whether to receive push notifications for memories' })
+  memories?: boolean;
+}
+
 export class UserPreferencesUpdateDto {
   // Description lives on schema to avoid duplication
   @ApiPropertyOptional({ description: undefined })
@@ -185,6 +193,13 @@ export class UserPreferencesUpdateDto {
   @ValidateNested()
   @Type(() => CastUpdate)
   cast?: CastUpdate;
+
+  // Description lives on schema to avoid duplication
+  @ApiPropertyOptional({ description: undefined })
+  @Optional()
+  @ValidateNested()
+  @Type(() => PushNotificationsUpdate)
+  pushNotifications?: PushNotificationsUpdate;
 }
 
 class AlbumsResponse {
@@ -262,6 +277,13 @@ class CastResponse {
   gCastEnabled: boolean = false;
 }
 
+class PushNotificationsResponse {
+  @ApiProperty({ description: 'Whether push notifications are enabled' })
+  enabled: boolean = true;
+  @ApiProperty({ description: 'Whether to receive push notifications for memories' })
+  memories: boolean = true;
+}
+
 export class UserPreferencesResponseDto implements UserPreferences {
   // Description lives on schema to avoid duplication
   @ApiProperty({ description: undefined })
@@ -296,6 +318,9 @@ export class UserPreferencesResponseDto implements UserPreferences {
   // Description lives on schema to avoid duplication
   @ApiProperty({ description: undefined })
   cast!: CastResponse;
+  // Description lives on schema to avoid duplication
+  @ApiProperty({ description: undefined })
+  pushNotifications!: PushNotificationsResponse;
 }
 
 export const mapPreferences = (preferences: UserPreferences): UserPreferencesResponseDto => {

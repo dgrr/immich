@@ -124,4 +124,26 @@ export class SessionRepository {
       ]);
     });
   }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getPushTokensByUserId(userId: string) {
+    return this.db
+      .selectFrom('session')
+      .select(['pushToken'])
+      .where('userId', '=', userId)
+      .where('pushToken', 'is not', null)
+      .where((eb) =>
+        eb.or([eb('expiresAt', 'is', null), eb('expiresAt', '>', DateTime.now().toJSDate())]),
+      )
+      .execute();
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING] })
+  async updatePushToken(id: string, pushToken: string | null) {
+    await this.db
+      .updateTable('session')
+      .set({ pushToken })
+      .where('id', '=', asUuid(id))
+      .execute();
+  }
 }

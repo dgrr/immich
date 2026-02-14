@@ -49,6 +49,10 @@ const getDefaultPreferences = (): UserPreferences => {
     cast: {
       gCastEnabled: false,
     },
+    pushNotifications: {
+      enabled: true,
+      memories: true,
+    },
   };
 };
 

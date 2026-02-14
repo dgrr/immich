@@ -37,10 +37,14 @@ const asNightlyTasksCron = (config: SystemConfig) => {
   return `${minutes} ${hours} * * *`;
 };
 
+// run every Sunday at 10:00 AM
+const MEMORIES_NOTIFICATION_CRON = '0 10 * * 0';
+
 @Injectable()
 export class QueueService extends BaseService {
   private services: ClassConstructor<unknown>[] = [];
   private nightlyJobsLock = false;
+  private memoriesNotificationLock = false;
 
   @OnEvent({ name: 'ConfigInit' })
   async onConfigInit({ newConfig: config }: ArgOf<'ConfigInit'>) {
@@ -58,6 +62,17 @@ export class QueueService extends BaseService {
         expression: cronExpression,
         start: true,
         onTick: () => handlePromiseError(this.handleNightlyJobs(), this.logger),
+      });
+    }
+
+    this.memoriesNotificationLock = await this.databaseRepository.tryLock(DatabaseLock.MemoriesNotification);
+    if (this.memoriesNotificationLock) {
+      this.logger.debug(`Scheduling weekly memories notification for ${MEMORIES_NOTIFICATION_CRON}`);
+      this.cronRepository.create({
+        name: CronJob.MemoriesNotification,
+        expression: MEMORIES_NOTIFICATION_CRON,
+        start: true,
+        onTick: () => handlePromiseError(this.handleMemoriesNotification(), this.logger),
       });
     }
   }
@@ -292,5 +307,9 @@ export class QueueService extends BaseService {
     }
 
     await this.jobRepository.queueAll(jobs);
+  }
+
+  async handleMemoriesNotification() {
+    await this.jobRepository.queue({ name: JobName.NotifyMemoriesCheck });
   }
 }

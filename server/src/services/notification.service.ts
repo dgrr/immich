@@ -475,4 +475,51 @@ export class NotificationService extends BaseService {
 
     this.websocketRepository.clientSend('on_notification', userId, mapNotification(item));
   }
+
+  @OnJob({ name: JobName.NotifyMemoriesCheck, queue: QueueName.Notification })
+  async handleMemoriesCheck(): Promise<JobStatus> {
+    if (!this.pushRepository.isConfigured()) {
+      this.logger.debug('Push notifications not configured, skipping memories check');
+      return JobStatus.Skipped;
+    }
+
+    const users = await this.userRepository.getList({ withDeleted: false });
+    const today = new Date();
+
+    for (const user of users) {
+      const { pushNotifications, memories } = getPreferences(user.metadata);
+      if (!pushNotifications.enabled || !pushNotifications.memories || !memories.enabled) {
+        continue;
+      }
+
+      const hasMemories = await this.memoryRepository.hasMemoriesForDate(user.id, today);
+      if (hasMemories) {
+        await this.jobRepository.queue({ name: JobName.NotifyMemoriesSend, data: { id: user.id } });
+      }
+    }
+
+    return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.NotifyMemoriesSend, queue: QueueName.Notification })
+  async handleMemoriesSend({ id: userId }: JobOf<JobName.NotifyMemoriesSend>): Promise<JobStatus> {
+    const sessions = await this.sessionRepository.getPushTokensByUserId(userId);
+    const tokens = sessions.map((s) => s.pushToken).filter((t): t is string => t !== null);
+
+    if (tokens.length === 0) {
+      return JobStatus.Skipped;
+    }
+
+    const successCount = await this.pushRepository.sendMany(
+      tokens.map((token) => ({
+        token,
+        title: 'Memories',
+        body: 'You have memories from this week in previous years',
+        data: { type: 'memories' },
+      })),
+    );
+
+    this.logger.log(`Sent ${successCount}/${tokens.length} memory notifications for user ${userId}`);
+    return JobStatus.Success;
+  }
 }

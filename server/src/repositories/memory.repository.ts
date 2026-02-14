@@ -170,4 +170,18 @@ export class MemoryRepository implements IBulkAsset {
       .where('id', '=', id)
       .where('deletedAt', 'is', null);
   }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.DATE] })
+  async hasMemoriesForDate(ownerId: string, date: Date) {
+    const result = await this.db
+      .selectFrom('memory')
+      .innerJoin('memory_asset', 'memory.id', 'memory_asset.memoriesId')
+      .where('memory.ownerId', '=', ownerId)
+      .where('memory.deletedAt', 'is', null)
+      .where('memory.showAt', '<=', date)
+      .where('memory.hideAt', '>=', date)
+      .select((qb) => qb.fn.countAll<number>().as('count'))
+      .executeTakeFirst();
+    return (result?.count ?? 0) > 0;
+  }
 }

@@ -389,7 +389,11 @@ export type JobItem =
   | { name: JobName.WorkflowRun; data: IWorkflowJob }
 
   // Editor
-  | { name: JobName.AssetEditThumbnailGeneration; data: IEntityJob };
+  | { name: JobName.AssetEditThumbnailGeneration; data: IEntityJob }
+
+  // Memory Notifications
+  | { name: JobName.NotifyMemoriesCheck; data?: IBaseJob }
+  | { name: JobName.NotifyMemoriesSend; data: IEntityJob };
 
 export type VectorExtension = (typeof VECTOR_EXTENSIONS)[number];
 
@@ -553,6 +557,10 @@ export type UserPreferences = {
   };
   cast: {
     gCastEnabled: boolean;
+  };
+  pushNotifications: {
+    enabled: boolean;
+    memories: boolean;
   };
 };
 

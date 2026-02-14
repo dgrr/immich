@@ -623,6 +623,8 @@ export enum JobName {
   NotifyUserSignup = 'NotifyUserSignup',
   NotifyAlbumInvite = 'NotifyAlbumInvite',
   NotifyAlbumUpdate = 'NotifyAlbumUpdate',
+  NotifyMemoriesCheck = 'NotifyMemoriesCheck',
+  NotifyMemoriesSend = 'NotifyMemoriesSend',
 
   UserDelete = 'UserDelete',
   UserDeleteCheck = 'UserDeleteCheck',
@@ -699,6 +701,7 @@ export enum DatabaseLock {
   BackupDatabase = 42,
   MaintenanceOperation = 621,
   MemoryCreation = 777,
+  MemoriesNotification = 778,
 }
 
 export enum MaintenanceAction {
@@ -843,6 +846,7 @@ export enum AssetVisibility {
 export enum CronJob {
   LibraryScan = 'LibraryScan',
   NightlyJobs = 'NightlyJobs',
+  MemoriesNotification = 'MemoriesNotification',
 }
 
 export enum ApiTag {

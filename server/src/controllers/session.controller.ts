@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put }
 import { ApiTags } from '@nestjs/swagger';
 import { Endpoint, HistoryBuilder } from 'src/decorators';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { SessionCreateDto, SessionCreateResponseDto, SessionResponseDto, SessionUpdateDto } from 'src/dtos/session.dto';
+import { PushTokenDto, SessionCreateDto, SessionCreateResponseDto, SessionResponseDto, SessionUpdateDto } from 'src/dtos/session.dto';
 import { ApiTag, Permission } from 'src/enum';
 import { Auth, Authenticated } from 'src/middleware/auth.guard';
 import { SessionService } from 'src/services/session.service';
@@ -84,5 +84,21 @@ export class SessionController {
   })
   lockSession(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto): Promise<void> {
     return this.service.lock(auth, id);
+  }
+
+  @Put(':id/push-token')
+  @Authenticated({ permission: Permission.SessionUpdate })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Register push token',
+    description: 'Register a push notification token for the session.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  registerPushToken(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Body() dto: PushTokenDto,
+  ): Promise<void> {
+    return this.service.registerPushToken(auth, id, dto);
   }
 }
