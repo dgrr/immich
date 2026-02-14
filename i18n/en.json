@@ -466,6 +466,7 @@
   "advanced_settings_self_signed_ssl_subtitle": "Skips SSL certificate verification for the server endpoint. Required for self-signed certificates.",
   "advanced_settings_self_signed_ssl_title": "Allow self-signed SSL certificates [EXPERIMENTAL]",
   "advanced_settings_sync_remote_deletions_subtitle": "Automatically delete or restore an asset on this device when that action is taken on the web",
+  "advanced_settings_sync_remote_deletions_ios_subtitle": "Automatically delete assets on this device when deleted from the web. Requires confirmation for each deletion.",
   "advanced_settings_sync_remote_deletions_title": "Sync remote deletions [EXPERIMENTAL]",
   "advanced_settings_tile_subtitle": "Advanced user's settings",
   "advanced_settings_troubleshooting_subtitle": "Enable additional features for troubleshooting",
