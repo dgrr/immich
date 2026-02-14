@@ -59,7 +59,11 @@ enum AppSettingsEnum<T> {
   cleanupKeepMediaType<int>(StoreKey.cleanupKeepMediaType, null, 0),
   cleanupKeepAlbumIds<String>(StoreKey.cleanupKeepAlbumIds, null, ""),
   cleanupCutoffDaysAgo<int>(StoreKey.cleanupCutoffDaysAgo, null, -1),
-  cleanupDefaultsInitialized<bool>(StoreKey.cleanupDefaultsInitialized, null, false);
+  cleanupDefaultsInitialized<bool>(StoreKey.cleanupDefaultsInitialized, null, false),
+  smartCacheEnabled<bool>(StoreKey.smartCacheEnabled, null, true),
+  smartCacheHighResDays<int>(StoreKey.smartCacheHighResDays, null, 7),
+  pushNotificationsEnabled<bool>(StoreKey.pushNotificationsEnabled, null, true),
+  pushNotificationsMemories<bool>(StoreKey.pushNotificationsMemories, null, true);
 
   const AppSettingsEnum(this.storeKey, this.hiveKey, this.defaultValue);
 

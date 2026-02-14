@@ -321,4 +321,57 @@ class SessionsApi {
     }
     return null;
   }
+
+  /// Register push token
+  ///
+  /// Register a push notification token for the session.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] token (required):
+  Future<Response> registerPushTokenWithHttpInfo(String id, String token,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/sessions/{id}/push-token'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody = {'token': token};
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Register push token
+  ///
+  /// Register a push notification token for the session.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] token (required):
+  Future<void> registerPushToken(String id, String token,) async {
+    final response = await registerPushTokenWithHttpInfo(id, token,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
 }
