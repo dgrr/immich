@@ -169,6 +169,13 @@
 			path = Schemas;
 			sourceTree = "<group>";
 		};
+		5B0B84AF2E3F6A4A00356422 /* FileTrash */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = FileTrash;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -278,6 +285,7 @@
 				B25D37792E72CA15008B6CA7 /* Connectivity */,
 				B21E34A62E5AF9760031FDB9 /* Background */,
 				B2CF7F8C2DDE4EBB00744BF6 /* Sync */,
+				5B0B84AF2E3F6A4A00356422 /* FileTrash */,
 				FA9973382CF6DF4B000EF859 /* Runner.entitlements */,
 				65DD438629917FAD0047FFA8 /* BackgroundSync */,
 				FAC7416727DB9F5500C668D8 /* RunnerProfile.entitlements */,
@@ -365,6 +373,7 @@
 				B231F52D2E93A44A00BC45D1 /* Core */,
 				B2CF7F8C2DDE4EBB00744BF6 /* Sync */,
 				FEE084F22EC172080045228E /* Schemas */,
+				5B0B84AF2E3F6A4A00356422 /* FileTrash */,
 			);
 			name = Runner;
 			productName = Runner;
