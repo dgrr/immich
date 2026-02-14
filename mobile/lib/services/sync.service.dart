@@ -225,13 +225,34 @@ class SyncService {
     final List<Asset> localAssets = await _assetRepository.getAllLocal();
     final List<Asset> matchedAssets = localAssets.where((asset) => idsToDelete.contains(asset.remoteId)).toList();
 
+    if (matchedAssets.isEmpty) {
+      _log.info("No local assets found matching ${idsToDelete.length} remote IDs for deletion");
+      return;
+    }
+
+    _log.info("Found ${matchedAssets.length} local assets to delete for ${idsToDelete.length} remote deletions");
+
     if (Platform.isAndroid) {
-      final mediaUrls = await Future.wait(matchedAssets.map((asset) => asset.local?.getMediaUrl() ?? Future.value(null)));
-      await _localFilesManager.moveToTrash(mediaUrls.nonNulls.toList());
+      final mediaUrls = <String>[];
+      for (final asset in matchedAssets) {
+        final mediaUrl = await asset.local?.getMediaUrl();
+        if (mediaUrl != null) {
+          mediaUrls.add(mediaUrl);
+        } else {
+          _log.warning("Could not get media URL for asset ${asset.fileName} (localId: ${asset.localId})");
+        }
+      }
+      if (mediaUrls.isNotEmpty) {
+        _log.info("Moving ${mediaUrls.length} files to trash on Android");
+        final success = await _localFilesManager.moveToTrash(mediaUrls);
+        _log.info("Android moveToTrash result: $success");
+      }
     } else if (Platform.isIOS) {
       final localIds = matchedAssets.map((asset) => asset.localId).nonNulls.toList();
       if (localIds.isNotEmpty) {
-        await _localFilesManager.moveToTrashByIds(localIds);
+        _log.info("Moving ${localIds.length} files to trash on iOS");
+        final success = await _localFilesManager.moveToTrashByIds(localIds);
+        _log.info("iOS moveToTrashByIds result: $success");
       }
     }
   }
@@ -689,22 +710,39 @@ class SyncService {
 
   Future<void> _toggleTrashStatusForAssets(List<Asset> assetsList) async {
     final trashMediaUrls = <String>[];
+    final trashLocalIds = <String>[];
 
     for (final asset in assetsList) {
       if (asset.isTrashed) {
-        final mediaUrl = await asset.local?.getMediaUrl();
-        if (mediaUrl == null) {
-          _log.warning("Failed to get media URL for asset ${asset.name} while moving to trash");
-          continue;
+        if (Platform.isAndroid) {
+          final mediaUrl = await asset.local?.getMediaUrl();
+          if (mediaUrl == null) {
+            _log.warning("Failed to get media URL for asset ${asset.fileName} while moving to trash");
+            continue;
+          }
+          trashMediaUrls.add(mediaUrl);
+        } else if (Platform.isIOS) {
+          final localId = asset.localId;
+          if (localId == null) {
+            _log.warning("Failed to get local ID for asset ${asset.fileName} while moving to trash");
+            continue;
+          }
+          trashLocalIds.add(localId);
         }
-        trashMediaUrls.add(mediaUrl);
       } else {
-        await _localFilesManager.restoreFromTrash(asset.fileName, asset.type.index);
+        if (Platform.isAndroid) {
+          await _localFilesManager.restoreFromTrash(asset.fileName, asset.type.index);
+        }
       }
     }
 
     if (trashMediaUrls.isNotEmpty) {
+      _log.info("Moving ${trashMediaUrls.length} trashed assets to device trash (Android)");
       await _localFilesManager.moveToTrash(trashMediaUrls);
+    }
+    if (trashLocalIds.isNotEmpty) {
+      _log.info("Moving ${trashLocalIds.length} trashed assets to device trash (iOS)");
+      await _localFilesManager.moveToTrashByIds(trashLocalIds);
     }
   }
 
@@ -712,7 +750,9 @@ class SyncService {
   Future<void> upsertAssetsWithExif(List<Asset> assets) async {
     if (assets.isEmpty) return;
 
-    if (Platform.isAndroid && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaAndroid)) {
+    final shouldSyncLocalDeletions = (Platform.isAndroid && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaAndroid)) ||
+        (Platform.isIOS && _appSettingsService.getSetting<bool>(AppSettingsEnum.manageLocalMediaIOS));
+    if (shouldSyncLocalDeletions) {
       await _toggleTrashStatusForAssets(assets);
     }
 
