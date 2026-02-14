@@ -959,7 +959,16 @@ export class MetadataService extends BaseService {
     if (!tags) {
       return null;
     }
-    return tags.BurstID ?? tags.BurstUUID ?? tags.CameraBurstID ?? tags.MediaUniqueID ?? null;
+    // priority: Apple PhotoIdentifier > XMP DocumentID > burst IDs
+    return (
+      tags.PhotoIdentifier ??
+      tags.DocumentID ??
+      tags.BurstID ??
+      tags.BurstUUID ??
+      tags.CameraBurstID ??
+      tags.MediaUniqueID ??
+      null
+    );
   }
 
   private getBitsPerSample(tags: ImmichTags): number | null {

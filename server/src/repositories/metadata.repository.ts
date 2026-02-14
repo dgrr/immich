@@ -43,6 +43,10 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
   Description?: StringOrNumber;
   ImageDescription?: StringOrNumber;
 
+  // capture identifiers for auto-stacking
+  PhotoIdentifier?: string;
+  DocumentID?: string;
+
   // Extended properties for image regions, such as faces
   RegionInfo?: {
     AppliedToDimensions: {

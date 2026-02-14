@@ -1050,4 +1050,17 @@ export class AssetRepository {
       .where('asset.type', '=', AssetType.Video)
       .executeTakeFirst();
   }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING] })
+  getByAutoStackId(ownerId: string, autoStackId: string) {
+    return this.db
+      .selectFrom('asset')
+      .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
+      .select(['asset.id', 'asset.stackId', 'asset.fileCreatedAt'])
+      .where('asset.ownerId', '=', asUuid(ownerId))
+      .where('asset_exif.autoStackId', '=', autoStackId)
+      .where('asset.deletedAt', 'is', null)
+      .orderBy('asset.fileCreatedAt', 'asc')
+      .execute();
+  }
 }

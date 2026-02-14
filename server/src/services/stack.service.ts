@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { OnEvent } from 'src/decorators';
 import { BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { StackCreateDto, StackResponseDto, StackSearchDto, StackUpdateDto, mapStack } from 'src/dtos/stack.dto';
 import { Permission } from 'src/enum';
+import { ArgOf } from 'src/repositories/event.repository';
 import { BaseService } from 'src/services/base.service';
 import { UUIDAssetIDParamDto } from 'src/validation';
 
@@ -75,6 +77,40 @@ export class StackService extends BaseService {
 
     await this.assetRepository.update({ id: assetId, stackId: null });
     await this.eventRepository.emit('StackUpdate', { stackId, userId: auth.user.id });
+  }
+
+  @OnEvent({ name: 'AssetMetadataExtracted' })
+  async onAssetMetadataExtracted({ assetId, userId }: ArgOf<'AssetMetadataExtracted'>) {
+    const asset = await this.assetRepository.getById(assetId, { exifInfo: true });
+    if (!asset?.exifInfo?.autoStackId) {
+      return;
+    }
+
+    // already in a stack
+    if (asset.stackId) {
+      return;
+    }
+
+    const candidates = await this.assetRepository.getByAutoStackId(userId, asset.exifInfo.autoStackId);
+    if (candidates.length < 2) {
+      return;
+    }
+
+    // check if any candidate is already stacked
+    const existingStackId = candidates.find((c) => c.stackId)?.stackId;
+    if (existingStackId) {
+      // add this asset to existing stack
+      await this.assetRepository.update({ id: assetId, stackId: existingStackId });
+      await this.eventRepository.emit('StackUpdate', { stackId: existingStackId, userId });
+      return;
+    }
+
+    // create new stack with oldest asset as primary
+    const assetIds = candidates.map((c) => c.id);
+    const stack = await this.stackRepository.create({ ownerId: userId }, assetIds);
+    await this.eventRepository.emit('StackCreate', { stackId: stack.id, userId });
+
+    this.logger.log(`Auto-stacked ${assetIds.length} assets with capture identifier ${asset.exifInfo.autoStackId}`);
   }
 
   private async findOrFail(id: string) {
