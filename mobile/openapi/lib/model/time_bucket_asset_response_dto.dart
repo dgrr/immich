@@ -213,7 +213,7 @@ class TimeBucketAssetResponseDto {
         stack: json[r'stack'] is List
           ? (json[r'stack'] as List).map((e) =>
               e == null ? null : (e as List).cast<String>()
-            ).toList()
+            ).whereType<List<String>>().toList()
           :  const [],
         thumbhash: json[r'thumbhash'] is Iterable
             ? (json[r'thumbhash'] as Iterable).cast<String>().toList(growable: false)
