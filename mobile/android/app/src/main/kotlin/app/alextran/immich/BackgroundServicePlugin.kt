@@ -221,13 +221,25 @@ class BackgroundServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
 
   @RequiresApi(Build.VERSION_CODES.R)
   private fun moveToTrash(mediaUrls: List<String>, result: Result) {
-    val urisToTrash = mediaUrls.map { it.toUri() }
+    Log.i(TAG, "moveToTrash called with ${mediaUrls.size} URLs")
+    val urisToTrash = mediaUrls.mapNotNull { url ->
+      try {
+        val uri = url.toUri()
+        Log.d(TAG, "Parsed URI: $uri from $url")
+        uri
+      } catch (e: Exception) {
+        Log.w(TAG, "Failed to parse URI from: $url", e)
+        null
+      }
+    }
     if (urisToTrash.isEmpty()) {
+      Log.e(TAG, "No valid URIs to trash after parsing")
       result.error("INVALID_ARGS", "No valid URIs provided", null)
       return
     }
 
-    toggleTrash(urisToTrash, true, result);
+    Log.i(TAG, "Trashing ${urisToTrash.size} URIs")
+    toggleTrash(urisToTrash, true, result)
   }
 
   @RequiresApi(Build.VERSION_CODES.R)
