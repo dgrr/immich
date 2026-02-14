@@ -16,6 +16,7 @@ import 'package:immich_mobile/providers/websocket.provider.dart';
 import 'package:immich_mobile/widgets/asset_grid/multiselect_grid.dart';
 import 'package:immich_mobile/widgets/common/immich_app_bar.dart';
 import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
+import 'package:immich_mobile/widgets/common/offline_indicator.dart';
 import 'package:immich_mobile/widgets/memories/memory_lane.dart';
 
 @RoutePage()
@@ -102,16 +103,24 @@ class PhotosPage extends HookConsumerWidget {
 
     return Stack(
       children: [
-        MultiselectGrid(
-          topWidget: (currentUser != null && currentUser.memoryEnabled) ? const MemoryLane() : const SizedBox(),
-          renderListProvider: timelineUsers.length > 1
-              ? multiUsersTimelineProvider(timelineUsers)
-              : singleUserTimelineProvider(currentUser?.id),
-          buildLoadingIndicator: buildLoadingIndicator,
-          onRefresh: refreshAssets,
-          stackEnabled: true,
-          archiveEnabled: true,
-          editEnabled: true,
+        Column(
+          children: [
+            SizedBox(height: kToolbarHeight + context.padding.top),
+            const OfflineIndicator(),
+            Expanded(
+              child: MultiselectGrid(
+                topWidget: (currentUser != null && currentUser.memoryEnabled) ? const MemoryLane() : const SizedBox(),
+                renderListProvider: timelineUsers.length > 1
+                    ? multiUsersTimelineProvider(timelineUsers)
+                    : singleUserTimelineProvider(currentUser?.id),
+                buildLoadingIndicator: buildLoadingIndicator,
+                onRefresh: refreshAssets,
+                stackEnabled: true,
+                archiveEnabled: true,
+                editEnabled: true,
+              ),
+            ),
+          ],
         ),
         AnimatedPositioned(
           duration: const Duration(milliseconds: 300),

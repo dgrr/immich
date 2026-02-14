@@ -11,6 +11,9 @@ import 'package:immich_mobile/services/asset.service.dart';
 import 'package:immich_mobile/services/etag.service.dart';
 import 'package:immich_mobile/services/exif.service.dart';
 import 'package:immich_mobile/services/sync.service.dart';
+import 'dart:async';
+
+import 'package:immich_mobile/providers/server_connectivity.provider.dart';
 import 'package:logging/logging.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
 
@@ -50,7 +53,6 @@ class AssetNotifier extends StateNotifier<bool> {
 
   Future<void> getAllAsset({bool clear = false}) async {
     if (_getAllAssetInProgress || _deleteInProgress) {
-      // guard against multiple calls to this method while it's still working
       return;
     }
     final stopwatch = Stopwatch()..start();
@@ -61,13 +63,28 @@ class AssetNotifier extends StateNotifier<bool> {
         await clearAllAssets();
         log.info("Manual refresh requested, cleared assets and albums from db");
       }
-      final users = await _syncService.getUsersFromServer();
-      bool changedUsers = false;
-      if (users != null) {
-        changedUsers = await _syncService.syncUsersFromServer(users);
-      }
-      final bool newRemote = await _assetService.refreshRemoteAssets();
+
+      // Always sync local assets first for offline support
       final bool newLocal = await _albumService.refreshDeviceAlbums();
+      log.info("Local assets synced: $newLocal");
+
+      // Then try to sync remote assets
+      bool newRemote = false;
+      bool changedUsers = false;
+      try {
+        final users = await _syncService.getUsersFromServer();
+        if (users != null) {
+          changedUsers = await _syncService.syncUsersFromServer(users);
+        }
+        newRemote = await _assetService.refreshRemoteAssets();
+        // Update connectivity state on successful sync
+        unawaited(_ref.read(serverConnectivityProvider.notifier).checkConnectivity());
+      } catch (e) {
+        log.warning("Remote sync failed, showing local assets only: $e");
+        // Update connectivity state on failure
+        unawaited(_ref.read(serverConnectivityProvider.notifier).checkConnectivity());
+      }
+
       dPrint(() => "changedUsers: $changedUsers, newRemote: $newRemote, newLocal: $newLocal");
       if (newRemote) {
         _ref.invalidate(memoryFutureProvider);
@@ -75,8 +92,7 @@ class AssetNotifier extends StateNotifier<bool> {
 
       log.info("Load assets: ${stopwatch.elapsedMilliseconds}ms");
     } catch (error) {
-      // If there is error in getting the remote assets, still showing the new local assets
-      await _albumService.refreshDeviceAlbums();
+      log.severe("Asset sync failed completely", error);
     } finally {
       _getAllAssetInProgress = false;
       if (mounted) {
