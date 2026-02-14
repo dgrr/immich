@@ -10,8 +10,10 @@ import 'package:immich_mobile/models/auth/login_response.model.dart';
 import 'package:immich_mobile/providers/api.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/user.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/services/auth.service.dart';
 import 'package:immich_mobile/services/foreground_upload.service.dart';
+import 'package:immich_mobile/services/push_notification.service.dart';
 import 'package:immich_mobile/services/secure_storage.service.dart';
 import 'package:immich_mobile/services/background_upload.service.dart';
 import 'package:immich_mobile/services/widget.service.dart';
@@ -172,7 +174,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
       isAdmin: user.isAdmin,
     );
 
+    // register push notification token if enabled
+    _registerPushNotifications();
+
     return true;
+  }
+
+  Future<void> _registerPushNotifications() async {
+    try {
+      final pushEnabled = const AppSettingsService().getSetting(AppSettingsEnum.pushNotificationsEnabled);
+      if (!pushEnabled) return;
+
+      final pushService = _ref.read(pushNotificationServiceProvider);
+      await pushService.initialize();
+      
+      // get current session id to register token
+      final sessions = await _apiService.sessionsApi.getSessions();
+      final currentSession = sessions?.firstWhere(
+        (s) => s.current,
+        orElse: () => sessions!.first,
+      );
+      
+      if (currentSession != null) {
+        await pushService.registerToken(currentSession.id);
+      }
+    } catch (e) {
+      _log.warning('Failed to register push notifications: $e');
+    }
   }
 
   Future<void> saveWifiName(String wifiName) async {
