@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/providers/offline_stats.provider.dart';
 import 'package:immich_mobile/providers/server_connectivity.provider.dart';
 
 class OfflineIndicator extends ConsumerWidget {
-  const OfflineIndicator({super.key});
+  final bool showStats;
+  
+  const OfflineIndicator({super.key, this.showStats = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -15,6 +18,7 @@ class OfflineIndicator extends ConsumerWidget {
     }
 
     final isChecking = connectivityState == ServerConnectivityState.checking;
+    final stats = showStats ? ref.watch(offlineStatsProvider).valueOrNull : null;
 
     return GestureDetector(
       onTap: isChecking
@@ -35,9 +39,7 @@ class OfflineIndicator extends ConsumerWidget {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                isChecking
-                    ? 'Connecting to server...'
-                    : 'Offline - Tap to retry',
+                _getMessage(isChecking, stats),
                 style: context.textTheme.bodySmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
@@ -49,5 +51,13 @@ class OfflineIndicator extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _getMessage(bool isChecking, OfflineStats? stats) {
+    if (isChecking) return 'Connecting to server...';
+    if (stats != null && stats.localOnly > 0) {
+      return 'Offline - ${stats.localOnly} pending upload';
+    }
+    return 'Offline - Tap to retry';
   }
 }
