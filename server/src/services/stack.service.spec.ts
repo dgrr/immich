@@ -19,6 +19,89 @@ describe(StackService.name, () => {
     expect(sut).toBeDefined();
   });
 
+  describe('onAssetMetadataExtracted', () => {
+    it('should skip if asset has no autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.asset.getById.mockResolvedValue({ ...asset, exifInfo: {} });
+
+      await sut.onAssetMetadataExtracted({ assetId: asset.id, userId: asset.ownerId });
+
+      expect(mocks.asset.getByAutoStackId).not.toHaveBeenCalled();
+      expect(mocks.stack.create).not.toHaveBeenCalled();
+    });
+
+    it('should skip if asset is already in a stack', async () => {
+      const asset = AssetFactory.create();
+      mocks.asset.getById.mockResolvedValue({
+        ...asset,
+        stackId: 'existing-stack',
+        exifInfo: { autoStackId: 'capture-123' },
+      });
+
+      await sut.onAssetMetadataExtracted({ assetId: asset.id, userId: asset.ownerId });
+
+      expect(mocks.asset.getByAutoStackId).not.toHaveBeenCalled();
+      expect(mocks.stack.create).not.toHaveBeenCalled();
+    });
+
+    it('should skip if only one asset has the autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.asset.getById.mockResolvedValue({
+        ...asset,
+        exifInfo: { autoStackId: 'capture-123' },
+      });
+      mocks.asset.getByAutoStackId.mockResolvedValue([{ id: asset.id, stackId: null, fileCreatedAt: new Date() }]);
+
+      await sut.onAssetMetadataExtracted({ assetId: asset.id, userId: asset.ownerId });
+
+      expect(mocks.stack.create).not.toHaveBeenCalled();
+    });
+
+    it('should add asset to existing stack', async () => {
+      const [asset1, asset2] = [AssetFactory.create(), AssetFactory.create()];
+      mocks.asset.getById.mockResolvedValue({
+        ...asset2,
+        exifInfo: { autoStackId: 'capture-123' },
+      });
+      mocks.asset.getByAutoStackId.mockResolvedValue([
+        { id: asset1.id, stackId: 'existing-stack', fileCreatedAt: new Date() },
+        { id: asset2.id, stackId: null, fileCreatedAt: new Date() },
+      ]);
+
+      await sut.onAssetMetadataExtracted({ assetId: asset2.id, userId: asset2.ownerId });
+
+      expect(mocks.asset.update).toHaveBeenCalledWith({ id: asset2.id, stackId: 'existing-stack' });
+      expect(mocks.event.emit).toHaveBeenCalledWith('StackUpdate', {
+        stackId: 'existing-stack',
+        userId: asset2.ownerId,
+      });
+      expect(mocks.stack.create).not.toHaveBeenCalled();
+    });
+
+    it('should create new stack for matching assets', async () => {
+      const [asset1, asset2] = [AssetFactory.create(), AssetFactory.create()];
+      const stack = StackFactory.from().primaryAsset(asset1).asset(asset2).build();
+
+      mocks.asset.getById.mockResolvedValue({
+        ...asset2,
+        exifInfo: { autoStackId: 'capture-123' },
+      });
+      mocks.asset.getByAutoStackId.mockResolvedValue([
+        { id: asset1.id, stackId: null, fileCreatedAt: new Date('2024-01-01') },
+        { id: asset2.id, stackId: null, fileCreatedAt: new Date('2024-01-02') },
+      ]);
+      mocks.stack.create.mockResolvedValue(stack);
+
+      await sut.onAssetMetadataExtracted({ assetId: asset2.id, userId: asset2.ownerId });
+
+      expect(mocks.stack.create).toHaveBeenCalledWith({ ownerId: asset2.ownerId }, [asset1.id, asset2.id]);
+      expect(mocks.event.emit).toHaveBeenCalledWith('StackCreate', {
+        stackId: stack.id,
+        userId: asset2.ownerId,
+      });
+    });
+  });
+
   describe('search', () => {
     it('should search stacks', async () => {
       const auth = AuthFactory.create();
