@@ -974,6 +974,64 @@ describe(MetadataService.name, () => {
       );
     });
 
+    it('should extract PhotoIdentifier as autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(asset);
+      mockReadTags({ PhotoIdentifier: '7AFBD03D-837C-419A-9D2E-7358C8932017' });
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({ autoStackId: '7AFBD03D-837C-419A-9D2E-7358C8932017' }),
+        expect.anything(),
+      );
+    });
+
+    it('should extract DocumentID as autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(asset);
+      mockReadTags({ DocumentID: 'xmp.did:12345678-1234-1234-1234-123456789012' });
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({ autoStackId: 'xmp.did:12345678-1234-1234-1234-123456789012' }),
+        expect.anything(),
+      );
+    });
+
+    it('should prefer PhotoIdentifier over DocumentID for autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(asset);
+      mockReadTags({
+        PhotoIdentifier: 'photo-id-123',
+        DocumentID: 'doc-id-456',
+      });
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({ autoStackId: 'photo-id-123' }),
+        expect.anything(),
+      );
+    });
+
+    it('should prefer PhotoIdentifier over BurstID for autoStackId', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(asset);
+      mockReadTags({
+        PhotoIdentifier: 'photo-id-123',
+        BurstID: 'burst-id-456',
+      });
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({ autoStackId: 'photo-id-123' }),
+        expect.anything(),
+      );
+    });
+
     it('should extract +00:00 timezone from raw value', async () => {
       // exiftool-vendored returns "no timezone" information even though "+00:00" might be set explicitly
       // https://github.com/photostructure/exiftool-vendored.js/issues/203
